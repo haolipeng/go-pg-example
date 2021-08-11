@@ -14,10 +14,6 @@ type User struct {
 	Emails []string
 }
 
-func (u User) String() string {
-	return fmt.Sprintf("User<%d %s %v>", u.Id, u.Name, u.Emails)
-}
-
 func main() {
 	var (
 		err         error
@@ -28,6 +24,7 @@ func main() {
 		delUser     User
 		userList    []User
 		queryResult []User
+		models      []interface{}
 	)
 
 	//1.连接数据库
@@ -51,7 +48,10 @@ func main() {
 	}(pgsqlDB)
 
 	//3.创建表
-	err = createSchema(pgsqlDB)
+	models = []interface{}{
+		(*User)(nil),
+	}
+	err = createSchema(pgsqlDB, models)
 	if err != nil {
 		goto ERR
 	}
@@ -142,11 +142,7 @@ func deleteSchema(db *pg.DB) error {
 }
 
 //通过定义的结构体来创建数据库表
-func createSchema(db *pg.DB) error {
-	models := []interface{}{
-		(*User)(nil),
-	}
-
+func createSchema(db *pg.DB, models []interface{}) error {
 	for _, model := range models {
 		err := db.Model(model).CreateTable(&orm.CreateTableOptions{
 			//Temp: true,//建表是临时的
