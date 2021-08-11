@@ -8,39 +8,32 @@ import (
 	"sync"
 )
 
-type PgWrapper struct {
-	Db *pg.DB
-}
-
-var g_dbWrapper *PgWrapper
+var pgdbObj *pg.DB
 var once sync.Once
 
-//GetInstance 单例模式实现
-func GetInstance() *PgWrapper {
+//GetInstance 单例模式实现数据连接的初始化
+func Connect() *pg.DB {
 	once.Do(func() {
-		g_dbWrapper = new(PgWrapper)
-
 		//1.连接数据库
-		pgsqlDB := pg.Connect(&pg.Options{
+		pgdbObj = pg.Connect(&pg.Options{
 			Addr:     conf.DbAddr,
 			User:     conf.User,
 			Password: conf.Password,
 			Database: conf.DbName,
 		})
-		if pgsqlDB == nil {
+		if pgdbObj == nil {
 			fmt.Println("pg.Connect() failed,error:")
+			panic(0)
 		}
-
-		g_dbWrapper.Db = pgsqlDB
 	})
 
-	return g_dbWrapper
+	return pgdbObj
 }
 
-//通过定义的models来创建数据库表
-func (w *PgWrapper) createSchema(models []interface{}) error {
+//CreateSchema 通过定义的models来创建数据库表
+func CreateSchema(db *pg.DB, models []interface{}) error {
 	for _, model := range models {
-		err := w.Db.Model(model).CreateTable(&orm.CreateTableOptions{
+		err := db.Model(model).CreateTable(&orm.CreateTableOptions{
 			//Temp: true,//建表是临时的
 			IfNotExists: true,
 		})
@@ -51,9 +44,9 @@ func (w *PgWrapper) createSchema(models []interface{}) error {
 	return nil
 }
 
-//通过结构体来删除表
-func (w *PgWrapper) deleteSchema(models []interface{}) error {
-	err := w.Db.Model(&models).DropTable(&orm.DropTableOptions{
+//DeleteSchema 通过结构体来删除表
+func DeleteSchema(db *pg.DB, models []interface{}) error {
+	err := db.Model(&models).DropTable(&orm.DropTableOptions{
 		IfExists: true,
 		Cascade:  true,
 	})

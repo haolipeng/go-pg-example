@@ -1,11 +1,9 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"github.com/go-pg/pg/v10"
-	"github.com/go-pg/pg/v10/orm"
-	"github.com/haolipeng/go-pg-example/conf"
+	"github.com/haolipeng/go-pg-example/pgdb"
 )
 
 type User struct {
@@ -17,7 +15,7 @@ type User struct {
 func main() {
 	var (
 		err         error
-		pgsqlDB     *pg.DB = nil
+		pgsqlDB     *pg.DB
 		result      pg.Result
 		user1       *User
 		updateUser  User
@@ -27,36 +25,21 @@ func main() {
 		models      []interface{}
 	)
 
-	//1.连接数据库
-	pgsqlDB = pg.Connect(&pg.Options{
-		Addr:     conf.DbAddr,
-		User:     conf.User,
-		Password: conf.Password,
-		Database: conf.DbName,
-	})
-	if pgsqlDB == nil {
-		err = errors.New("pg.Connect() failed,error:")
-		goto ERR
-	}
+	pgsqlDB = pgdb.Connect()
 
 	//莫忘记关闭数据库连接
-	defer func(pgsqlDB *pg.DB) {
-		err := pgsqlDB.Close()
-		if err != nil {
-			fmt.Println("close postgresql failed")
-		}
-	}(pgsqlDB)
+	defer pgsqlDB.Close()
 
 	//3.创建表
 	models = []interface{}{
 		(*User)(nil),
 	}
-	err = createSchema(pgsqlDB, models)
+	err = pgdb.CreateSchema(pgsqlDB, models)
 	if err != nil {
 		goto ERR
 	}
 
-	//4.插入一条记录
+	//4.single 插入一条记录
 	user1 = &User{
 		Id:     1,
 		Name:   "admin",
@@ -68,7 +51,7 @@ func main() {
 	}
 	fmt.Printf("single insert rows affected:%d\n", result.RowsAffected())
 
-	//5.批量插入多条记录
+	//5.batch 批量插入多条记录
 	userList = []User{
 		{
 			Id:     2,
@@ -127,30 +110,4 @@ func main() {
 ERR:
 	fmt.Println("error:", err)
 	return
-}
-
-//通过结构体来删除表
-func deleteSchema(db *pg.DB) error {
-	models := []interface{}{
-		(*User)(nil),
-	}
-	err := db.Model(&models).DropTable(&orm.DropTableOptions{
-		IfExists: true,
-		Cascade:  true,
-	})
-	return err
-}
-
-//通过定义的结构体来创建数据库表
-func createSchema(db *pg.DB, models []interface{}) error {
-	for _, model := range models {
-		err := db.Model(model).CreateTable(&orm.CreateTableOptions{
-			//Temp: true,//建表是临时的
-			IfNotExists: true,
-		})
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }
