@@ -4,19 +4,19 @@ import (
 	"errors"
 	"fmt"
 	"github.com/go-pg/pg/v10"
-	"github.com/go-pg/pg/v10/orm"
 	"github.com/haolipeng/go-pg-example/conf"
+	"github.com/haolipeng/go-pg-example/pgdb"
 )
 
 type Profile struct {
 	tableName struct{} `pg:"profile"`
-	ID        int
+	ID        int      `pg:"id"`
 	Lang      string
 }
 
 type User struct {
 	tableName struct{} `pg:"users"`
-	ID        int
+	ID        int      `pg:"user_id"`
 	Name      string
 	ProfileID int
 	Profile   *Profile `pg:"rel:has-one"` //note the has-one relation
@@ -65,7 +65,7 @@ func main() {
 		(*Profile)(nil),
 		(*User)(nil),
 	}
-	err = createSchema(pgsqlDB, models)
+	err = pgdb.CreateSchema(pgsqlDB, models)
 	if err != nil {
 		fmt.Println("createSchema failed:", err)
 	}
@@ -108,8 +108,8 @@ func main() {
 
 	//6.利用Relation关系查找记录
 	var user User
-	//err = pgsqlDB.Model(&user).Relation("Profile").Where("user.id = ?", 1).Select()
-	err = pgsqlDB.Model(&user).Relation("Profile").Select()
+	err = pgsqlDB.Model(&user).Relation("Profile").Where("user_id = ?", 1).Select()
+	//err = pgsqlDB.Model(&user).Relation("Profile").Select()
 	if err != nil {
 		fmt.Println("Select with Relation failed:", err)
 		return
@@ -117,18 +117,4 @@ func main() {
 
 	fmt.Println("user:", user)
 	fmt.Println("program exit normal!")
-}
-
-//通过定义的结构体来创建数据库表
-func createSchema(db *pg.DB, models []interface{}) error {
-	for _, model := range models {
-		err := db.Model(model).CreateTable(&orm.CreateTableOptions{
-			//Temp: true,//建表是临时的
-			IfNotExists: true,
-		})
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }
