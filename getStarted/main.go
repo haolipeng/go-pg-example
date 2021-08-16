@@ -42,7 +42,7 @@ func main() {
 	//4.single 插入一条记录
 	user1 = &User{
 		Id:     1,
-		Name:   "admin",
+		Name:   "admin.admin",
 		Emails: []string{"admin1@admin", "admin2@admin"},
 	}
 	result, err = pgsqlDB.Model(user1).Insert()
